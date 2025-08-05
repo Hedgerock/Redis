@@ -1,0 +1,62 @@
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: application-redis-api
+    ports:
+      - "8082:8082"
+    depends_on:
+      - redis
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - REDIS_HOST=application-redis
+      - REDIS_PORT=6379
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/application_db_pg
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+    networks:
+      - redis-application-network
+
+  redis:
+    image: redis:latest
+    container_name: application-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - redis-application-network
+
+  postgres:
+    image: postgres:latest
+    container_name: application-redis-postgres
+    environment:
+      POSTGRES_DB: application_db_pg
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - redis-application-network
+
+  redis-insight:
+    image: redis/redisinsight:latest
+    container_name: application-redisinsight
+    restart: always
+    depends_on:
+      - redis
+    ports:
+      - "5540:5540"
+    volumes:
+      - redis-application-volume:/data
+    networks:
+      - redis-application-network
+
+volumes:
+  redis-application-volume:
+  pgdata:
+
+networks:
+  redis-application-network:
+    driver: bridge
