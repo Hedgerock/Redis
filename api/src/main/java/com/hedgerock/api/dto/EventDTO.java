@@ -1,4 +1,6 @@
 package com.hedgerock.api.dto;
 
-public record EventDTO(String id, String title, String description) {
+import java.io.Serializable;
+
+public record EventDTO(String id, String title, String description) implements Serializable {
 }

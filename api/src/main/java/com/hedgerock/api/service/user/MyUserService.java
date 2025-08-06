@@ -2,23 +2,21 @@ package com.hedgerock.api.service.user;
 
 import com.hedgerock.api.dto.UserDTO;
 import com.hedgerock.api.mapper.UserMapper;
-import com.hedgerock.api.repository.jpa.UserJpaRepository;
-import com.hedgerock.api.repository.redis.UserRedisRepository;
+import com.hedgerock.api.repository.UserJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
-
-import static com.hedgerock.api.utils.service.MyServiceUtils.getFromCache;
-import static com.hedgerock.api.utils.service.MyServiceUtils.getFromDataBaseAndSaveToRedis;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class MyUserService implements UserService {
 
-    private final UserRedisRepository userRedisRepository;
     private final UserJpaRepository userJpaRepository;
     private final UserMapper userMapper;
 
@@ -32,35 +30,28 @@ public class MyUserService implements UserService {
                         userDTO.events()
                 );
 
-        final var saved = userJpaRepository.save(userMapper.toEntity(dtoWithId));
-        userRedisRepository.save(userMapper.toRedis(dtoWithId));
-
-        return userMapper.toDto(saved);
+        return userMapper.toDto(userJpaRepository.save(userMapper.toEntity(dtoWithId)));
     }
 
     @Override
+    @Cacheable(cacheNames = "users", key = "#id", unless = "#result.name() == null")
     public UserDTO get(String id) {
-        return userRedisRepository.findById(id)
-                .map(entity -> getFromCache(id, entity, userMapper))
-                .orElseGet(() ->
-                        getFromDataBaseAndSaveToRedis(
-                                id, userJpaRepository, userRedisRepository, userMapper));
+        return userJpaRepository.findById(id).map(userMapper::toDto).orElseThrow();
     }
 
     @Override
+    @CachePut(cacheNames = "users", key = "#id")
     public UserDTO update(String id, UserDTO dto) {
         log.info("Updating user in database and redis: {}", id);
 
-        final var updatedUser = new UserDTO(id, dto.name(), dto.age(), dto.events());
-        final var updated = userJpaRepository.save(userMapper.toEntity(updatedUser));
-        userRedisRepository.save(userMapper.toRedis(updatedUser));
+        final var updatedDTO = new UserDTO(id, dto.name(), dto.age(), dto.events());
 
-        return userMapper.toDto(updated);
+        return userMapper.toDto(userJpaRepository.save(userMapper.toEntity(updatedDTO)));
     }
 
     @Override
+    @CacheEvict(cacheNames = "events", key = "#id")
     public void delete(String id) {
         userJpaRepository.deleteById(id);
-        userRedisRepository.deleteById(id);
     }
 }
