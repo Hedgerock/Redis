@@ -1,4 +1,4 @@
-package com.hedgerock.api.entity.jpa;
+package com.hedgerock.api.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
