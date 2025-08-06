@@ -21,6 +21,7 @@ public class MyEventService implements EventService {
     private final EventMapper eventMapper;
 
     @Override
+    @CachePut(cacheNames = "events", key = "#result.id()")
     public EventDTO create(EventDTO eventDTO) {
         log.info("Saving Event to Postgres and Redis");
         final EventDTO withIdDTO =
