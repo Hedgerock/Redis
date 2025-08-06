@@ -21,6 +21,7 @@ public class MyUserService implements UserService {
     private final UserMapper userMapper;
 
     @Override
+    @CachePut(cacheNames = "users", key = "#result.id()")
     public UserDTO create(UserDTO userDTO) {
         log.info("Saving User to Postgres and Redis");
         final UserDTO dtoWithId =
